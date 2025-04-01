@@ -1,19 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using API.Data;
 using API.DTOs;
 using API.Entities;
 using API.Interfaces;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 
 {
-    public class UsersController(IUserRepository userRepository ) : BaseApiController
+  [Authorize]
+      public class UsersController(IUserRepository userRepository , IMapper mapper) : BaseApiController
     {
      
         [HttpGet]
@@ -36,6 +39,26 @@ namespace API.Controllers
           //  return mapper.Map<MemberDto>(user);
 
            return user;
+        }
+
+        [HttpPut]
+        public async Task<ActionResult> UpdateUser(MemberUpdateDto memberUpdateDto)
+        {
+            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (username == null) return BadRequest ("No username found in token");
+
+            var user = await userRepository.GetUserByUserNameAsync(username);
+
+            if (user == null) return BadRequest ("Could not find User");
+
+            mapper.Map(memberUpdateDto , user);
+
+            userRepository.Update(user);
+
+            if (await userRepository.SaveAllAsync()) return  NoContent();
+
+            return BadRequest ("failed to update User");
         }
     }
 }
