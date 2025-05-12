@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using API.Entities;
 using Microsoft.AspNetCore.Identity;
+using API.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = false,
             ValidateAudience = false
           };
+
+           options.Events = new JwtBearerEvents
+           {
+              OnMessageReceived = context => 
+              {
+                var accessToken = context.Request.Query["access_token"];
+
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"));
+                {
+                  context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+              }
+           };
         });
   builder.Services.AddAuthorizationBuilder()
         .AddPolicy("RequireAdminRole" , policy => policy.RequireRole("Admin"))
@@ -38,13 +54,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 
 var app = builder.Build();
-app.UseCors(x=>x.AllowAnyHeader().AllowAnyMethod()
+app.UseCors(x=>x.AllowAnyHeader().AllowAnyMethod().AllowCredentials()
   .WithOrigins("http://localhost:4200","https://localhost:4200"));
   
 // Configure the HTTP request pipeline.
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<PresenceHub>("hubs/presence");
+app.MapHub<MessageHub>("hubs/message");
 
 using var scope = app.Services.CreateScope();
 var services = scope.ServiceProvider;
@@ -54,6 +72,7 @@ var services = scope.ServiceProvider;
    var userManager =  services.GetRequiredService<UserManager<AppUser>>();
    var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
    await context.Database.MigrateAsync();
+   await context.Database.ExecuteSqlRawAsync("DELETE FROM [Connections]");
    await Seed.SeedUser(userManager , roleManager);
  }
  catch (Exception ex) {

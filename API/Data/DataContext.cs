@@ -18,6 +18,10 @@ public class DataContext(DbContextOptions options) : IdentityDbContext<AppUser ,
     
     public DbSet<Message> Messages { get; set; }
 
+    public DbSet<Group> Groups { get; set; }
+
+    public DbSet<Connection> Connections { get; set; }
+
     override protected void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

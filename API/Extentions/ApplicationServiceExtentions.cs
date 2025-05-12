@@ -7,6 +7,7 @@ using API.Helpers;
 using API.Interfaces;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
+using API.SignalR;
 
 namespace API.Extentions
 {
@@ -28,6 +29,8 @@ namespace API.Extentions
             services.AddScoped<IPhotoService,PhotoService>();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.Configure<CloudinarySettings>(config.GetSection("CloudinarySettings"));
+            services.AddSignalR();
+            services.AddSingleton<PresenceTracker>();
 
             return services;
         }

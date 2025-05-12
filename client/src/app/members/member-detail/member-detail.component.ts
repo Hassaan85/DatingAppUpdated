@@ -1,6 +1,5 @@
-import { Component, inject, OnInit, ViewChild } from '@angular/core';
-import { MembersService } from '../../_services/members.service';
-import { ActivatedRoute } from '@angular/router';
+import { Component, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Member } from '../../_models/member';
 import { TabDirective, TabsetComponent, TabsModule } from 'ngx-bootstrap/tabs';
 import { GalleryItem, GalleryModule, ImageItem } from 'ng-gallery';
@@ -9,6 +8,9 @@ import { DatePipe } from '@angular/common';
 import { MemberMessagesComponent } from "../member-messages/member-messages.component";
 import { Message } from '../../_models/message';
 import { MessagesService } from '../../_services/messages.service';
+import { PresenceService } from '../../_services/presence.service';
+import { AccountsService } from '../../_services/accounts.service';
+import { HubConnectionState } from '@microsoft/signalr';
 
 @Component({
   selector: 'app-member-detail',
@@ -17,15 +19,17 @@ import { MessagesService } from '../../_services/messages.service';
   templateUrl: './member-detail.component.html',
   styleUrl: './member-detail.component.css'
 })
-export class MemberDetailComponent implements OnInit {
+export class MemberDetailComponent implements OnInit  , OnDestroy{
   @ViewChild('memberTabs' , {static:true}) memberTabs?:TabsetComponent;
-  private memberService = inject(MembersService);
+   presenceService = inject(PresenceService);
   private messageService = inject(MessagesService);
+  private accountService = inject(AccountsService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   member: Member = {} as Member;
   images: GalleryItem[]=[];
   activeTab?:TabDirective;
-  messages:Message[] = []
+  // messages:Message[] = []
 
   ngOnInit(): void {
     this.route.data.subscribe({
@@ -37,6 +41,10 @@ export class MemberDetailComponent implements OnInit {
       }
     })
 
+    this.route.paramMap.subscribe({
+      next: _ => this.onRouterParamsChanged()
+    })
+
     this.route.queryParams.subscribe({
       next : params  => {
         params['tab'] && this.selectTab(params['tab'])
@@ -45,20 +53,41 @@ export class MemberDetailComponent implements OnInit {
     
   }
 
-  onTabActivated (data : TabDirective) {
-    this.activeTab = data;
-    if (this.activeTab.heading === 'Messages'  && this.messages.length === 0 && this.member) {
-      this.messageService.getMessageThread(this.member.username).subscribe({
-        next :
-         messages =>   this.messages = messages
-         
+  onRouterParamsChanged() {
+    const user  = this.accountService.currentUser();
+    if (!user) return;
+    if (this.messageService.hubConnection?.state === HubConnectionState.Connected && this.activeTab?.heading === 'Messages')
+    {
+      this.messageService.hubConnection.stop().then(() => {
+        this.messageService.createHubConnection(user, this.member.username );
       })
     }
   }
 
-  onUpdatedMessage(event:Message) {
-    this.messages.push(event);
+  onTabActivated (data : TabDirective) {
+    this.activeTab = data;
+    this.router.navigate([], {
+      relativeTo:this.route,
+      queryParams : {tab : this.activeTab.heading},
+      queryParamsHandling : 'merge'
+    })
+    if (this.activeTab.heading === 'Messages'  && this.member) {
+      // this.messageService.getMessageThread(this.member.username).subscribe({
+      //   next :
+      //    messages =>   this.messages = messages
+         
+      // })
+      const user = this.accountService.currentUser();
+      if(!user) return
+      this.messageService.createHubConnection(user , this.member.username);
+    } else {
+      this.messageService.stopHubConnection();
+    }
   }
+
+  // onUpdatedMessage(event:Message) {
+  //   this.messages.push(event);
+  // }
 
   selectTab(heading :string) {
     if (this.memberTabs) {
@@ -78,4 +107,8 @@ export class MemberDetailComponent implements OnInit {
 //     }
 //     })
 //   }
+
+   ngOnDestroy(): void {
+     this.messageService.stopHubConnection();
+   }
  }
