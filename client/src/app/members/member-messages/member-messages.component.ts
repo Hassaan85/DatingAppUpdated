@@ -32,11 +32,11 @@ private scrollToBottom () {
   }
 }
   sendMessage() {
-    this.loading=true;
+ //   this.loading=true;
     this.messageService.sendMessage(this.username() , this.messageContent).then(()=> {
       this.messageForm?.reset();
       this.scrollToBottom();
-    }).finally(() => this.loading = false);
+    })//.finally(() => this.loading = false);
   }
 
 

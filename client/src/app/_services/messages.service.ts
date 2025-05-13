@@ -16,13 +16,13 @@ export class MessagesService {
   baseUrl = environment.apiUrl;
   hubUrl = environment.hubsUrl;
   private http = inject(HttpClient);
-  private busyService = inject(BusyService);
+/// private busyService = inject(BusyService);
   hubConnection? : HubConnection
   paginatedResult = signal<PaginationedResult<Message[]>|null>(null)
   messageThread = signal<Message[]>([])
 
  createHubConnection(user : User , otherUsername : string) {
-  this.busyService.busy();
+//  this.busyService.busy();
    this.hubConnection = new HubConnectionBuilder()
        .withUrl(this.hubUrl + 'message?user=' + otherUsername,{
         accessTokenFactory: () => user.token
@@ -30,8 +30,8 @@ export class MessagesService {
        .withAutomaticReconnect()
        .build();
 
-       this.hubConnection.start().catch(error => console.log(error) )
-       .finally(()=> this.busyService.idle());
+       this.hubConnection.start().catch(error => console.log(error))
+//       .finally(()=> this.busyService.idle());
 
        this.hubConnection.on('Receive Message Thread' , messages => {
         this.messageThread.set(messages);
