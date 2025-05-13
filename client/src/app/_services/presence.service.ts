@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
-import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
+import { HttpTransportType, HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
 import { ToastrService } from 'ngx-toastr';
 import { User } from '../_models/user';
 import { take } from 'rxjs';
@@ -20,7 +20,8 @@ onlineUsers = signal<string[]>([]);
 createHubConnection(user : User) {
   this.hubConnection = new HubConnectionBuilder()
        .withUrl(this.hubUrl +  'presence', {
-        accessTokenFactory : () =>user.token
+        accessTokenFactory : () =>user.token,
+        transport: HttpTransportType.WebSockets
        })
        .withAutomaticReconnect()
        .build();
