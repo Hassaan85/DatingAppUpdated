@@ -55,7 +55,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 app.UseCors(x=>x.AllowAnyHeader().AllowAnyMethod().AllowCredentials()
-  .WithOrigins("http://localhost:4200","https://localhost:4200"));
+  .WithOrigins("http://localhost:4200","https://localhost:4200","https://dating-app-f8b5cgcdecc0ggd4.eastasia-01.azurewebsites.net"));
   
 // Configure the HTTP request pipeline.
 app.UseAuthentication();
